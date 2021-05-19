@@ -21,4 +21,6 @@ data class Tour(
     val sigungucode:String, //시군구코드
     val tel:String?,        //전화번호
     val dist:Int?,  //위도경도값으로 검색했을 경우에만 값이 존재한다.
-)
+) {
+    fun getAddress() = (addr1?:"") + if(addr2 != null) " $addr2" else ""
+}

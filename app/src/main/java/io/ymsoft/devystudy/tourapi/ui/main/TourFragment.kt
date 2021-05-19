@@ -15,10 +15,11 @@ class TourFragment : Fragment() {
         fun newInstance() = TourFragment()
     }
 
-    private lateinit var viewModel: MainViewModel
+    private lateinit var viewModel: TourViewModel
     private var _binding: TourFragmentBinding? =
         null // This property is only valid between onCreateView and onDestroyView.
     private val binding get() = _binding!!
+    private val listAdapter = TourListAdapter()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -34,13 +35,15 @@ class TourFragment : Fragment() {
         binding.search.setOnClickListener {
             viewModel.search(binding.word.text.toString())
         }
+        binding.recyclerView.adapter = listAdapter
         super.onViewCreated(view, savedInstanceState)
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
-        viewModel = ViewModelProvider(this).get(MainViewModel::class.java)
-        viewModel.resultText.observe(viewLifecycleOwner, { binding.result.text = it })
+        viewModel = ViewModelProvider(this).get(TourViewModel::class.java)
+        viewModel.searchResult.observe(viewLifecycleOwner, { listAdapter.submitList(it) })
+//        viewModel.resultText.observe(viewLifecycleOwner, { binding.result.text = it })
         viewModel.isLoading.observe(viewLifecycleOwner, { binding.progress.isVisible = it })
     }
 
