@@ -13,11 +13,11 @@ class TourListAdapter(
     var longClickListener: ((Int, Tour) -> Boolean)? = null
 ) : ListAdapter<Tour, TourListAdapter.TourViewHolder>(object : DiffUtil.ItemCallback<Tour>() {
     override fun areItemsTheSame(oldItem: Tour, newItem: Tour): Boolean {
-        return oldItem.contenid == newItem.contenid
+        return oldItem.id == newItem.id
     }
 
     override fun areContentsTheSame(oldItem: Tour, newItem: Tour): Boolean {
-        return oldItem == newItem
+        return oldItem.modifiedtime == newItem.modifiedtime
     }
 
 }) {
@@ -34,12 +34,12 @@ class TourListAdapter(
         holder.onBind(tour)
     }
 
-    inner class TourViewHolder (
+    inner class TourViewHolder(
         val binding: ItemTourBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
         fun onBind(model: Tour) {
-            binding.title.text = model.title
+            binding.title.text = "$$adapterPosition ${model.title}"
             binding.address.text = model.getAddress()
             binding.root.setOnClickListener { clickListener?.invoke(adapterPosition, model) }
             binding.root.setOnLongClickListener {

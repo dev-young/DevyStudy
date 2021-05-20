@@ -1,5 +1,7 @@
 package io.ymsoft.devystudy.tourapi.models
 
+import com.google.gson.annotations.SerializedName
+
 data class Tour(
     val title:String,       //제목
     val addr1:String?,      //주소
@@ -8,8 +10,8 @@ data class Tour(
     val cat1:String,        //대분류
     val cat2:String,        //중분류
     val cat3:String,        //소분류
-    val contenid:String,    //콘텐츠ID
-    val contentTypeId:String,   //콘텐츠타입ID
+    @SerializedName("contentid") val id:Int,    //콘텐츠ID
+    @SerializedName("contenttypeid") val typeId:Int,   //콘텐츠타입ID
     val createdtime:String, //등록일
     val firstimage:String?, //대표이미지(원본)
     val firstimage2:String?,    //대표이미지(썸네일)

@@ -7,6 +7,9 @@ import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView.OnScrollListener
 import io.ymsoft.devystudy.databinding.TourFragmentBinding
 
 class TourFragment : Fragment() {
@@ -35,7 +38,21 @@ class TourFragment : Fragment() {
         binding.search.setOnClickListener {
             viewModel.search(binding.word.text.toString())
         }
+        binding.search.setOnLongClickListener {
+            viewModel.search(37.56762539175941, 126.98092840228584)
+            true
+        }
         binding.recyclerView.adapter = listAdapter
+        binding.recyclerView.addOnScrollListener(object : OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                val lm = binding.recyclerView.layoutManager as LinearLayoutManager
+                if (lm.itemCount <= lm.findLastCompletelyVisibleItemPosition() + 4) {
+                    viewModel.searchNext(binding.word.text.toString())
+                }
+
+            }
+        })
         super.onViewCreated(view, savedInstanceState)
     }
 
