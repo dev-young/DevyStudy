@@ -26,7 +26,14 @@ class TourListAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TourViewHolder {
         val layoutInflater = LayoutInflater.from(parent.context)
         val binding = ItemTourBinding.inflate(layoutInflater, parent, false)
-        return TourViewHolder(binding)
+        val vh = TourViewHolder(binding)
+        binding.root.setOnClickListener {
+            clickListener?.invoke(vh.adapterPosition, getItem(vh.adapterPosition))
+        }
+        binding.root.setOnLongClickListener {
+            longClickListener?.invoke(vh.adapterPosition, getItem(vh.adapterPosition)) ?: false
+        }
+        return vh
     }
 
     override fun onBindViewHolder(holder: TourViewHolder, position: Int) {
@@ -39,12 +46,8 @@ class TourListAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
 
         fun onBind(model: Tour) {
-            binding.title.text = "$$adapterPosition ${model.title}"
-            binding.address.text = model.getAddress()
-            binding.root.setOnClickListener { clickListener?.invoke(adapterPosition, model) }
-            binding.root.setOnLongClickListener {
-                longClickListener?.invoke(adapterPosition, model) ?: false
-            }
+            binding.tour = model
+            binding.position = "${adapterPosition + 1} "
         }
 
     }
