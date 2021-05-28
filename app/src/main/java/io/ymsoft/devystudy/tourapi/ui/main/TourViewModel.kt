@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.reflect.TypeToken
-import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
 import io.ymsoft.devystudy.tourapi.models.Tour
@@ -28,7 +27,6 @@ class TourViewModel : ViewModel() {
             else api.searchWithLatLng(lat!!, lng!!)
         }
             .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
             .map {
                 convert(it).let {
                     currentResult = it.first
@@ -59,7 +57,6 @@ class TourViewModel : ViewModel() {
         isLoading.value = true
         disposable = ServiceGenerator.createTour().searchWithKeyWord(word, nextPage)
             .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
             .map {
                 convert(it).let {
                     currentResult = it.first

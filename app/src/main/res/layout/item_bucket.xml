@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+
+        <variable
+            name="bucket"
+            type="io.ymsoft.devystudy.contentsprovider.models.Bucket" />
+    </data>
+
+    <io.ymsoft.devystudy.contentsprovider.SquareFrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="0.5dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground">
+
+        <io.ymsoft.devystudy.contentsprovider.SquareImageView
+            android:id="@+id/imgView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@android:color/darker_gray" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:background="#4D000000"
+            android:orientation="vertical"
+            android:padding="4dp">
+
+            <TextView
+                android:id="@+id/title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="2dp"
+                android:singleLine="true"
+                android:text="@{bucket.name}"
+                android:textColor="@color/white"
+                android:textStyle="bold"
+                tools:text="제목" />
+
+            <TextView
+                android:id="@+id/address"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@{bucket.imgCount}"
+                android:textColor="@color/white"
+                tools:text="100" />
+
+        </LinearLayout>
+
+
+    </io.ymsoft.devystudy.contentsprovider.SquareFrameLayout>
+</layout>
+

@@ -1,8 +1,16 @@
 package io.ymsoft.devystudy
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import io.ymsoft.devystudy.tourapi.ui.main.TourFragment
+import android.view.Menu
+import android.view.MenuItem
+import androidx.annotation.NonNull
+import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.commit
+import io.ymsoft.devystudy.contentsprovider.ui.BucketListFragment
+import io.ymsoft.devystudy.contentsprovider.ui.PhotoListFragment
+import timber.log.Timber
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -10,9 +18,35 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.main_activity)
         if (savedInstanceState == null) {
-            supportFragmentManager.beginTransaction()
-                    .replace(R.id.container, TourFragment.newInstance())
-                    .commitNow()
+            supportFragmentManager.commit {
+                replace(R.id.container, BucketListFragment.newInstance())
+            }
         }
+
     }
+
+    fun <T : Fragment> addFragment(f: T) {
+        supportFragmentManager.commit {
+            addToBackStack(null)
+            replace(R.id.container, f)
+        }
+        Timber.i("${f.javaClass.simpleName} 추가됨")
+    }
+
+
+    override fun onOptionsItemSelected(@NonNull item: MenuItem): Boolean {
+        val curId = item.itemId
+        when (curId) {
+            R.id.menu_photo -> {
+                addFragment(PhotoListFragment.newInstance(true))
+            }
+            R.id.menu_album -> {
+                onBackPressed()
+            }
+            else -> {
+            }
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
 }

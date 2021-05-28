@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <data>
+
+        <variable
+            name="photo"
+            type="io.ymsoft.devystudy.contentsprovider.models.Photo" />
+    </data>
+
+    <io.ymsoft.devystudy.contentsprovider.SquareFrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="0.5dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground">
+
+        <io.ymsoft.devystudy.contentsprovider.SquareImageView
+            android:id="@+id/imgView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@android:color/darker_gray" />
+
+
+    </io.ymsoft.devystudy.contentsprovider.SquareFrameLayout>
+</layout>
+
