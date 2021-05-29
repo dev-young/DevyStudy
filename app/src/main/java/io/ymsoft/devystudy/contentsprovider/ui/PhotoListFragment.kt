@@ -72,19 +72,6 @@ class PhotoListFragment(private val showAll: Boolean) : Fragment() {
         })
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-
-        if (requestCode == MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE) {
-            if (ContextCompat.checkSelfPermission(
-                    requireContext(),
-                    Manifest.permission.READ_EXTERNAL_STORAGE
-                ) != PackageManager.PERMISSION_GRANTED
-            ) viewModel.loadBucket()
-        }
-
-    }
-
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

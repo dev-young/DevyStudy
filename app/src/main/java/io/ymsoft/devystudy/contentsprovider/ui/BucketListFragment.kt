@@ -1,16 +1,12 @@
 package io.ymsoft.devystudy.contentsprovider.ui
 
 import android.Manifest
-import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.*
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
-import io.ymsoft.devystudy.MainActivity
-import io.ymsoft.devystudy.R
+import com.google.android.material.snackbar.Snackbar
+import io.ymsoft.devystudy.*
 import io.ymsoft.devystudy.databinding.ContentsListFragmentBinding
 
 class BucketListFragment : Fragment() {
@@ -53,36 +49,36 @@ class BucketListFragment : Fragment() {
         return binding.root
     }
 
-    private val MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE = 1
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        if (ContextCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                requireActivity(), arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
-                MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE
-            )
-        } else {
-            viewModel.loadBucket()
-        }
         viewModel.bucketList.observe(viewLifecycleOwner, bucketListAdapter::submitList)
+        loadBucket()
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
+    private val loadBucket by lazy {
+        RunWithPermission(requireActivity(), Manifest.permission.READ_EXTERNAL_STORAGE)
+            .setGrantedAction {
+                showToast("권한 승인됨")
+                viewModel.loadBucket()
+            }.setDeniedAction { run ->
+                binding.root.showSnackbar(
+                    "권한을 허용해주세요.",
+                    Snackbar.LENGTH_INDEFINITE, "OK"
+                ) {
+                    run.requestPermission()
+                }
+            }.setDeniedTwiceAction { run ->
+                binding.root.showSnackbar(
+                    "권한을 허용해주세요.",
+                    Snackbar.LENGTH_INDEFINITE, "OK"
+                ) {
+                    run.startPermissionIntent()
+                }
+            }
+    }
 
-        if (requestCode == MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE) {
-            if (ContextCompat.checkSelfPermission(
-                    requireContext(),
-                    Manifest.permission.READ_EXTERNAL_STORAGE
-                ) != PackageManager.PERMISSION_GRANTED
-            ) viewModel.loadBucket()
-        }
-
+    private fun loadBucket() {
+        loadBucket.run()
     }
 
     override fun onDestroyView() {
