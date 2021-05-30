@@ -40,7 +40,7 @@ class MainActivity : AppCompatActivity() {
                 addFragment(PhotoListFragment.newInstance(true))
             }
             R.id.menu_album -> {
-                onBackPressed()
+                supportFragmentManager.popBackStack()
             }
             else -> {
             }

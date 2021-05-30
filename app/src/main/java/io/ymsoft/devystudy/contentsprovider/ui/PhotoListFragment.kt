@@ -1,17 +1,17 @@
 package io.ymsoft.devystudy.contentsprovider.ui
 
 import android.Manifest
-import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.*
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
-import io.ymsoft.devystudy.MainActivity
+import com.google.android.material.snackbar.Snackbar
 import io.ymsoft.devystudy.R
+import io.ymsoft.devystudy.RunWithPermission
 import io.ymsoft.devystudy.databinding.ContentsListFragmentBinding
+import io.ymsoft.devystudy.showSnackbar
+import io.ymsoft.devystudy.showToast
+import timber.log.Timber
 
 class PhotoListFragment(private val showAll: Boolean) : Fragment() {
 
@@ -40,6 +40,16 @@ class PhotoListFragment(private val showAll: Boolean) : Fragment() {
         inflater.inflate(R.menu.menu_main2, menu)
     }
 
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == R.id.menu_album) {
+            if(!loadAllPhoto.isGranted()){
+
+            }
+            parentFragmentManager.popBackStack()
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -50,30 +60,37 @@ class PhotoListFragment(private val showAll: Boolean) : Fragment() {
         return binding.root
     }
 
-    private val MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE = 1
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        if(showAll) viewModel.loadAllPhoto()
-        if (ContextCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                requireActivity(), arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
-                MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE
-            )
-        } else {
-            viewModel.loadBucket()
-        }
         viewModel.photoList.observe(viewLifecycleOwner, { list ->
             binding.photoList.visibility = View.VISIBLE
             photoListAdapter.submitList(list)
         })
+        if(showAll) loadAllPhoto.run()
+
+    }
+
+    private val loadAllPhoto by lazy {
+        RunWithPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+            .setActionWhenGranted {
+                showToast("권한 승인됨")
+                viewModel.loadAllPhoto()
+            }.setActionWhenDenied { run ->
+                Timber.i("권한을 허용해주세요!")
+                binding.root.showSnackbar(
+                    "권한을 허용해주세요!",
+                    Snackbar.LENGTH_INDEFINITE, "OK"
+                ) {
+                    run.requestPermission()
+                }
+            }.setActionInsteadPopup { run ->
+                run.startPermissionIntent()
+            }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        Timber.e("")
         _binding = null
     }
 }

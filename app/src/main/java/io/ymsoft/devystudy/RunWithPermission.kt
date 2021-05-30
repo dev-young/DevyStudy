@@ -1,73 +1,127 @@
 package io.ymsoft.devystudy
 
-import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.SystemClock
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import timber.log.Timber
+import androidx.fragment.app.Fragment
 
-class RunWithPermission(
-    private val componentActivity: ComponentActivity,
-    vararg permissions: String
-) {
-    private val permissions = LinkedHashSet<String>(permissions.toList())
-    private val context = componentActivity.applicationContext
+/**권한이 있어야만 수행 가능한 작업을 이 클래스를 통해 편하게 실행시킬 수 있다.
+ * @param componentActivity Fragment에서 사용할 경우 requireActivity()를 쓰고 Activity에서 사용시 this 사용
+ * @param permissions 해당 작업을 수행하는데 필요한 권한 목록*/
+class RunWithPermission {
+    constructor(activity: AppCompatActivity, vararg permissions: String) {
+        this.permissions = LinkedHashSet(permissions.toList())
+        componentActivity = activity
+        context = activity
 
-    private var lastRequestTime = 0L
-
-    private val callback = { granted: Map<String, Boolean> ->
-        if (granted.values.contains(false)) {
-            val diff = SystemClock.uptimeMillis() - lastRequestTime
-            Timber.i("거절까지 걸린 시간: $diff")
-            if (diff < 600) {   //팝업창이 뜨지 않아서 거절을 하기까지 걸리는 시간이 현저히 짧을 경우
-                doWhenDeniedTwice?.invoke(this)
-            } else doWhenDenied?.invoke(this)
-        } else {
-            doGrantedAction()
-        }
-        Unit
-    }
-
-    private val permissionLauncher: ActivityResultLauncher<Array<String>> =
-        componentActivity.registerForActivityResult(
+        permissionLauncher = activity.registerForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions(),
             callback
         )
 
-    var doWhenGranted: (() -> Unit)? = null
-    var doWhenDenied: ((RunWithPermission) -> Unit)? = null
+        intentLauncher =
+            activity.registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+                if (isGranted()) actionWhenGranted?.invoke()
+                else actionWhenDenied?.invoke(this)
+            }
+    }
 
-    //거절을 두번 당했을 때 (Android 11에서는 두번 거절당하면 더이상 팝업창이 안뜬다. 이때 처리할 작업)
-    var doWhenDeniedTwice: ((RunWithPermission) -> Unit)? = null
+    constructor(fragment: Fragment, vararg permissions: String) {
+        this.permissions = LinkedHashSet(permissions.toList())
+        componentActivity = fragment.requireActivity()
+        context = fragment.requireContext()
 
-    fun setGrantedAction(action: (() -> Unit)): RunWithPermission {
-        doWhenGranted = action
+        permissionLauncher = fragment.registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions(),
+            callback
+        )
+
+        intentLauncher =
+            fragment.registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+                if (isGranted()) actionWhenGranted?.invoke()
+                else actionWhenDenied?.invoke(this)
+            }
+    }
+
+    private var intentLauncher: ActivityResultLauncher<Intent>
+    private var permissionLauncher: ActivityResultLauncher<Array<String>>
+    private var permissions: LinkedHashSet<String>
+    private var context: Context
+    private var componentActivity: ComponentActivity
+
+    private var lastRequestTime = 0L
+    private val timeLimit = 500L    //권한 요청 후 거절하기까지 시간이 timeLimit 보다 작으면 팝업창이 뜨지 않은것으로 간주
+
+    private val callback = { granted: Map<String, Boolean> ->
+        if (granted.values.contains(false)) {
+            val diff = SystemClock.uptimeMillis() - lastRequestTime
+//            Timber.i("거절까지 걸린 시간: $diff")
+            if (diff < timeLimit) {
+                if (requestCount == 1) actionWhenDenied?.invoke(this)   //첫 로딩에서 팝업이 뜨지 않을 경우 actionWhenDenied 수행
+                else actionInsteadPopup?.invoke(this)
+            } else actionWhenDenied?.invoke(this)
+        } else {
+            actionWhenGranted?.invoke()
+        }
+        Unit
+    }
+
+    private var actionWhenGranted: (() -> Unit)? = null
+    private var actionWhenDenied: ((RunWithPermission) -> Unit)? = null
+
+    //다시 보지않기 체크 혹은 거절을 두번 당했을 때 (Android 11에서는 두번 거절당하면 더이상 팝업창이 안뜬다. 이때 처리할 작업)
+    private var actionInsteadPopup: ((RunWithPermission) -> Unit)? = null
+
+
+    /**권한이 승인되었을 때 작업*/
+    fun setActionWhenGranted(action: (() -> Unit)): RunWithPermission {
+        actionWhenGranted = action
         return this
     }
 
-    fun setDeniedAction(action: ((RunWithPermission) -> Unit)): RunWithPermission {
-        doWhenDenied = action
+    /**권한 요청 팝업이 떴지만 승인하지 않았거나 옵션 변경 화면에서 권한을 승인하지 않았을 때 작업*/
+    fun setActionWhenDenied(action: ((RunWithPermission) -> Unit)): RunWithPermission {
+        actionWhenDenied = action
         return this
     }
 
-    fun setDeniedTwiceAction(action: ((RunWithPermission) -> Unit)): RunWithPermission {
-        doWhenDeniedTwice = action
+    /**다시보지않기를 체크했거나 안드로이드 11버전 이상에서 2회 이상 거부를 눌렀을 경우 권한을 요청해도 팝업창이 안뜨는데 이때 취할 작업*/
+    fun setActionInsteadPopup(action: ((RunWithPermission) -> Unit)): RunWithPermission {
+        actionInsteadPopup = action
         return this
+    }
+
+    fun run() {
+        if (isGranted()) {
+            actionWhenGranted?.invoke()
+        } else {
+
+            var isUserClickDenied = false
+            for (p in permissions) {
+                if (componentActivity.shouldShowRequestPermissionRationale(p)) {
+                    isUserClickDenied = true
+                    break
+                }
+            }
+            if (isUserClickDenied) {
+                actionWhenDenied?.invoke(this)
+            } else if (lastRequestTime == 0L)
+                requestPermission()
+        }
     }
 
     fun isGranted(): Boolean {
         for (p in permissions) {
-            if (ContextCompat.checkSelfPermission(
-                    context,
-                    p
-                ) != PackageManager.PERMISSION_GRANTED
+            if (ContextCompat.checkSelfPermission(context, p)
+                != PackageManager.PERMISSION_GRANTED
             ) {
                 return false
             }
@@ -75,101 +129,22 @@ class RunWithPermission(
         return true
     }
 
+    private var requestCount = 0
     fun requestPermission() {
+        requestCount++
         lastRequestTime = SystemClock.uptimeMillis()
         permissionLauncher.launch(permissions.toTypedArray())
     }
 
-    private fun isUserClickDenied(): Boolean {
-        var isUserClickDenied = false
-        for (p in permissions) {
-            if (componentActivity.shouldShowRequestPermissionRationale(p)) {
-                isUserClickDenied = true
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    deniedCount[p] = deniedCount[p]!! + 1
-                } else break
-            }
-        }
-        if(isUserClickDenied)
-            save()
-        return isUserClickDenied
-    }
 
+    /**팝업창이 안뜰때 대신 사용하면 좋은 기능 (해당 앱의 환결설정 페이지로 넘어간다.)*/
     fun startPermissionIntent() {
-        val i = Intent(
+        val intent = Intent(
             Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
             Uri.parse("package:" + context.packageName)
         )
-        componentActivity.startActivity(i)
+//        intent.addCategory(Intent.CATEGORY_DEFAULT)
+//        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        intentLauncher.launch(intent)
     }
-
-    fun run() {
-        if (isGranted()) {
-            doGrantedAction()
-        } else {
-
-            val isUserClickDenied = isUserClickDenied()
-
-            if (!deniedCount.values.none { it > 1 }) {
-                //거절을 두번 이상 누른 권한이 있을경우
-                doWhenDeniedTwice?.invoke(this)
-
-            } else if (isUserClickDenied) {
-                //거절을 직접 누른경우
-                doWhenDenied?.invoke(this)
-
-            } else {
-                //권한 승인 여부를 선택 안했거나
-                requestPermission()
-            }
-        }
-    }
-
-
-    private fun doGrantedAction() {
-        doWhenGranted?.invoke()
-        clear()
-    }
-
-
-    private val PERMISSION = "permission"
-    private val deniedCount = hashMapOf<String, Int>().apply {
-        permissions.forEach {
-            this[it] = 0
-        }
-    }
-
-    fun save() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val sp = context.getSharedPreferences(PERMISSION, Activity.MODE_PRIVATE)
-            val editor = sp.edit()
-            deniedCount.forEach { (key, v) ->
-                editor.putInt(key, v)
-            }
-            editor.apply()
-        }
-    }
-
-    fun load() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val sp = context.getSharedPreferences(PERMISSION, Activity.MODE_PRIVATE)
-            deniedCount.keys.forEach { k ->
-                deniedCount[k] = sp.getInt(k, 0)
-            }
-        }
-    }
-
-    fun clear() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val sp = context.getSharedPreferences(PERMISSION, Activity.MODE_PRIVATE)
-            val editor = sp.edit()
-            editor.clear()
-            editor.apply()
-        }
-    }
-
-    init {
-        load()
-    }
-
 }

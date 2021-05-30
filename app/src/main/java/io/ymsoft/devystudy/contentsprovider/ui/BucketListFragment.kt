@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.snackbar.Snackbar
 import io.ymsoft.devystudy.*
 import io.ymsoft.devystudy.databinding.ContentsListFragmentBinding
+import timber.log.Timber
 
 class BucketListFragment : Fragment() {
 
@@ -52,33 +53,30 @@ class BucketListFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         viewModel.bucketList.observe(viewLifecycleOwner, bucketListAdapter::submitList)
-        loadBucket()
+        loadBucket.run()
     }
 
     private val loadBucket by lazy {
-        RunWithPermission(requireActivity(), Manifest.permission.READ_EXTERNAL_STORAGE)
-            .setGrantedAction {
+        RunWithPermission(this,  Manifest.permission.READ_EXTERNAL_STORAGE)
+            .setActionWhenGranted {
                 showToast("권한 승인됨")
                 viewModel.loadBucket()
-            }.setDeniedAction { run ->
+            }.setActionWhenDenied { run ->
+                Timber.i("권한을 허용해주세요.")
                 binding.root.showSnackbar(
                     "권한을 허용해주세요.",
                     Snackbar.LENGTH_INDEFINITE, "OK"
                 ) {
                     run.requestPermission()
                 }
-            }.setDeniedTwiceAction { run ->
-                binding.root.showSnackbar(
-                    "권한을 허용해주세요.",
-                    Snackbar.LENGTH_INDEFINITE, "OK"
-                ) {
-                    run.startPermissionIntent()
-                }
+            }.setActionInsteadPopup { run ->
+                run.startPermissionIntent()
             }
     }
 
-    private fun loadBucket() {
-        loadBucket.run()
+    override fun onResume() {
+        super.onResume()
+
     }
 
     override fun onDestroyView() {
